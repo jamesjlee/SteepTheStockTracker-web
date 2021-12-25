@@ -1,0 +1,3 @@
+mutation deleteWatchlist($id: Int!) {
+  deleteWatchlist(id: $id)
+}

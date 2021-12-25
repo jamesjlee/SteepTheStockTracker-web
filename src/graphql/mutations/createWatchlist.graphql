@@ -1,0 +1,9 @@
+mutation createWatchlist($name: String!, $items: [String!]!) {
+  createWatchlist(name: $name, items: $items) {
+    name
+    id
+    items
+    createdAt
+    updatedAt
+  }
+}

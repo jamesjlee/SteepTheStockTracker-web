@@ -1,0 +1,11 @@
+query getWatchlists {
+  getWatchlists {
+    watchlist {
+      id
+      name
+      items
+      createdAt
+      updatedAt
+    }
+  }
+}

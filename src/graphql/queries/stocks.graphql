@@ -1,0 +1,15 @@
+query stocks($symbol: String!, $from: DateTime!, $to: DateTime!) {
+  stocks(symbol: $symbol, from: $from, to: $to) {
+    errors {
+      field
+      message
+    }
+    stocks {
+      open
+      high
+      low
+      close
+      recordDate
+    }
+  }
+}

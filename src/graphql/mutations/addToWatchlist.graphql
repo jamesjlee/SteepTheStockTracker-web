@@ -1,0 +1,9 @@
+mutation addToWatchlist($input: WatchlistInput!) {
+  addToWatchlist(input: $input) {
+    id
+    items
+    name
+    createdAt
+    updatedAt
+  }
+}

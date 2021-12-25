@@ -1,0 +1,11 @@
+query getWatchlist($name: String!) {
+  getWatchlist(name: $name) {
+    watchlist {
+      id
+      name
+      items
+      createdAt
+      updatedAt
+    }
+  }
+}

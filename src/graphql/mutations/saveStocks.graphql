@@ -1,0 +1,15 @@
+mutation saveStocks($symbol: String!, $from: DateTime!, $to: DateTime!) {
+  saveStocks(symbol: $symbol, from: $from, to: $to) {
+    errors {
+      field
+      message
+    }
+    stocks {
+      open
+      high
+      low
+      close
+      recordDate
+    }
+  }
+}
