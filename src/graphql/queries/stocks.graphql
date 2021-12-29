@@ -5,11 +5,14 @@ query stocks($symbol: String!, $from: DateTime!, $to: DateTime!) {
       message
     }
     stocks {
+      id
       open
       high
       low
       close
       recordDate
+      volume
+      symbol
     }
   }
 }

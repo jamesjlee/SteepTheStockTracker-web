@@ -1,5 +1,5 @@
-query getWatchlist($name: String!) {
-  getWatchlist(name: $name) {
+query getWatchlist($id: Int!) {
+  getWatchlist(id: $id) {
     watchlist {
       id
       name

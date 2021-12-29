@@ -1,6 +1,6 @@
 query getWatchlists {
   getWatchlists {
-    watchlist {
+    watchlists {
       id
       name
       items

@@ -36,9 +36,6 @@ const Navbar = ({}) => {
         <Box m={6}>
           <Link href="/watchlists">Watchlists</Link>
         </Box>
-        <Box m={6}>
-          <Link href="/table">Table</Link>
-        </Box>
         <Flex ml="auto">
           <Box m={6}>
             <Button
