@@ -1,0 +1,18 @@
+query getAllStocks($symbols: [String!], $from: DateTime!, $to: DateTime!) {
+  getAllStocks(symbols: $symbols, from: $from, to: $to) {
+    errors {
+      field
+      message
+    }
+    stocks {
+      id
+      open
+      high
+      low
+      close
+      recordDate
+      volume
+      symbol
+    }
+  }
+}

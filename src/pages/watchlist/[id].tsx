@@ -11,7 +11,6 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
-import moment from 'moment';
 import { useRouter } from 'next/router';
 import React, { useRef } from 'react';
 import Layout from '../../components/Layout';
@@ -74,13 +73,9 @@ const Watchlist = ({}) => {
                     cache.evict({
                       fieldName: 'watchlists:{}',
                     });
-                    cache.evict({
-                      fieldName: 'stocks:{}',
-                    });
                   },
                 });
               }
-              router.reload();
               tickerRef.current.value = '';
             }}
           />
@@ -106,9 +101,10 @@ const Watchlist = ({}) => {
               </Tr>
             </Thead>
             <Tbody>
-              {data?.getWatchlist!.watchlist!.items.map((watchlistItem) => {
+              {/* {data?.getWatchlist!.watchlist!.items.map((watchlistItem) => {
                 return <Stocks key={watchlistItem} item={watchlistItem} />;
-              })}
+              })} */}
+              <Stocks />
             </Tbody>
           </Table>
         </Box>
