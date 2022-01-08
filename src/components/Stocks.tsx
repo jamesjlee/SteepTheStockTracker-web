@@ -19,7 +19,6 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
     ...new Set(data?.getAllStocks.stocks.map((stock) => stock.symbol)),
   ]);
 
-  const [difference, setDifference] = useState<string[]>([]);
   const { data, error, loading } = useGetAllStocksQuery({
     variables: {
       from,
@@ -62,10 +61,17 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
       },
     });
 
-    for (const stockTicker of savedStock!.data!.saveStocks!.stocks!) {
-      if (!allTickers?.includes(stockTicker.symbol)) {
-        setReducedStockMap((prevStockMap) => [...prevStockMap, stockTicker]);
-        setAllTickers((prevTickers) => [...prevTickers!, stockTicker.symbol]);
+    if (
+      savedStock &&
+      savedStock.data &&
+      savedStock.data.saveStocks &&
+      savedStock.data.saveStocks.stocks
+    ) {
+      for (const stockTicker of savedStock?.data?.saveStocks?.stocks!) {
+        if (!allTickers?.includes(stockTicker.symbol)) {
+          setReducedStockMap((prevStockMap) => [...prevStockMap, stockTicker]);
+          setAllTickers((prevTickers) => [...prevTickers!, stockTicker.symbol]);
+        }
       }
     }
   };
@@ -87,17 +93,13 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
     ];
 
     if (fetchedTickers!.length! > 0) {
-      setDifference(
-        fetchedTickers!
-          .filter((ticker) => !allTickers!.includes(ticker))
-          .concat(
-            ...allTickers!.filter((ticker) => !fetchedTickers!.includes(ticker))
-          )
-      );
-
-      if (difference.length > 0) {
-        checkDiff(difference);
-        setDifference(difference);
+      let diff = fetchedTickers!
+        .filter((ticker) => !allTickers!.includes(ticker))
+        .concat(
+          ...allTickers!.filter((ticker) => !fetchedTickers!.includes(ticker))
+        );
+      if (diff.length > 0) {
+        checkDiff(diff);
       }
     }
   };
@@ -107,6 +109,7 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
       !loading &&
       !saveStockLoading &&
       data?.getAllStocks! &&
+      data.getAllStocks.stocks &&
       data!.getAllStocks!.stocks!.length! === 0
     ) {
       for (const ticker of allTickers!) {
@@ -115,12 +118,14 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
     } else if (
       !loading &&
       !saveStockLoading &&
+      data?.getAllStocks! &&
+      data.getAllStocks.stocks &&
       data?.getAllStocks.stocks?.length! > 0 &&
       allTickers
     ) {
       checkAndSaveDiffs();
     }
-  }, [data, difference, allTickers, reducedStockMap]);
+  }, [data, allTickers, reducedStockMap]);
 
   if (loading || saveStockLoading || watchlistLoading) {
     let loadingSkeletons = [];

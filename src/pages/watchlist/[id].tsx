@@ -88,7 +88,7 @@ const Watchlist = ({}) => {
                 <IconButton
                   ml={2}
                   icon={<ArrowForwardIcon />}
-                  aria-label="back"
+                  aria-label="forward"
                 />
               </Box>
             </TableCaption>
@@ -101,9 +101,9 @@ const Watchlist = ({}) => {
               </Tr>
             </Thead>
             <Tbody>
-              {/* {data?.getWatchlist!.watchlist!.items.map((watchlistItem) => {
-                return <Stocks key={watchlistItem} item={watchlistItem} />;
-              })} */}
+              {data?.getWatchlist!.watchlist!.items.map((watchlistItem) => {
+                return <Stocks key={watchlistItem} />;
+              })}
               <Stocks />
             </Tbody>
           </Table>
