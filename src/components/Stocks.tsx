@@ -1,7 +1,7 @@
-import { Stack, Skeleton, Td, Tr } from '@chakra-ui/react';
+import { Skeleton, Td, Tr } from '@chakra-ui/react';
 import moment from 'moment';
 import { useRouter } from 'next/router';
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Stock,
   useGetAllStocksQuery,
@@ -13,9 +13,18 @@ import StockElement from './Stock';
 const Stocks: React.FC<{ items: string[] | undefined }> = ({
   items,
 }): JSX.Element | null => {
-  const from = moment(moment.now()).subtract(5, 'days').format('YYYY-MM-DD');
-  const to = moment(moment.now()).subtract(1, 'days').format('YYYY-MM-DD');
-  const days = 4;
+  const from = localStorage.getItem('fromDate')
+    ? localStorage.getItem('fromDate')
+    : localStorage.setItem(
+        'fromDate',
+        moment(moment.now()).subtract(5, 'days').format('YYYY-MM-DD')
+      );
+  const to = localStorage.getItem('toDate')
+    ? localStorage.getItem('toDate')
+    : localStorage.setItem(
+        'toDate',
+        moment(moment.now()).subtract(1, 'days').format('YYYY-MM-DD')
+      );
   const [allTickers, setAllTickers] = useState<string[]>([]);
 
   const { data, error, loading } = useGetAllStocksQuery({
@@ -88,7 +97,21 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
         .concat(
           ...allTickers!.filter((ticker) => !fetchedTickers!.includes(ticker))
         );
-      if (diff.length > 0) {
+
+      let dateIsDifferent = false;
+      if (tickers.length > 0) {
+        dateIsDifferent =
+          moment(localStorage.getItem('fromDate')) <
+            moment(tickers[0]?.recordDate) ||
+          moment(localStorage.getItem('fromDate')) >
+            moment(tickers[0]?.recordDate) ||
+          moment(localStorage.getItem('toDate')) <
+            moment(tickers[tickers.length - 1]?.recordDate) ||
+          moment(localStorage.getItem('toDate')) <
+            moment(tickers[tickers.length - 1]?.recordDate);
+      }
+
+      if (diff.length > 0 || dateIsDifferent) {
         checkDiff(diff);
       }
     }
@@ -106,7 +129,7 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
 
   useEffect(() => {
     checkAndSaveDiffs();
-  }, []);
+  }, [data]);
 
   if (loading || saveStockLoading || watchlistLoading) {
     let loadingSkeletons = [];

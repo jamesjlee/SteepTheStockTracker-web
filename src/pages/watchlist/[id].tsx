@@ -11,6 +11,7 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
+import moment from 'moment';
 import { useRouter } from 'next/router';
 import React, { useRef } from 'react';
 import Layout from '../../components/Layout';
@@ -24,6 +25,41 @@ const Watchlist = ({}) => {
   const [addToWatchlist] = useAddToWatchlistMutation();
   const tickerRef = useRef<any>();
   const router = useRouter();
+
+  const backDate = () => {
+    if (localStorage.getItem('fromDate') && localStorage.getItem('toDate')) {
+      localStorage.setItem(
+        'fromDate',
+        moment(localStorage.getItem('fromDate'))
+          .subtract(5, 'days')
+          .format('YYYY-MM-DD')
+      );
+      localStorage.setItem(
+        'toDate',
+        moment(localStorage.getItem('toDate'))
+          .subtract(5, 'days')
+          .format('YYYY-MM-DD')
+      );
+      router.reload();
+    }
+  };
+  const forwardDate = () => {
+    if (localStorage.getItem('fromDate') && localStorage.getItem('toDate')) {
+      localStorage.setItem(
+        'fromDate',
+        moment(localStorage.getItem('fromDate'))
+          .add(5, 'days')
+          .format('YYYY-MM-DD')
+      );
+      localStorage.setItem(
+        'toDate',
+        moment(localStorage.getItem('toDate'))
+          .add(5, 'days')
+          .format('YYYY-MM-DD')
+      );
+      router.reload();
+    }
+  };
 
   if (loading) {
     return (
@@ -84,11 +120,22 @@ const Watchlist = ({}) => {
           <Table variant="striped" size="lg">
             <TableCaption>
               <Box>
-                <IconButton mr={2} icon={<ArrowBackIcon />} aria-label="back" />
+                <IconButton
+                  mr={2}
+                  icon={<ArrowBackIcon />}
+                  aria-label="back"
+                  onClick={backDate}
+                />
                 <IconButton
                   ml={2}
                   icon={<ArrowForwardIcon />}
                   aria-label="forward"
+                  onClick={forwardDate}
+                  disabled={moment(
+                    moment(localStorage.getItem('toDate'))
+                  ).isSame(
+                    moment(moment().subtract(1, 'days').format('YYYY-MM-DD'))
+                  )}
                 />
               </Box>
             </TableCaption>
