@@ -1,7 +1,7 @@
 import { Stack, Skeleton, Td, Tr } from '@chakra-ui/react';
 import moment from 'moment';
 import { useRouter } from 'next/router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
   Stock,
   useGetAllStocksQuery,
@@ -10,20 +10,19 @@ import {
 } from '../generated/graphql';
 import StockElement from './Stock';
 
-const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
+const Stocks: React.FC<{ items: string[] | undefined }> = ({
+  items,
+}): JSX.Element | null => {
   const from = moment(moment.now()).subtract(5, 'days').format('YYYY-MM-DD');
   const to = moment(moment.now()).subtract(1, 'days').format('YYYY-MM-DD');
   const days = 4;
-  const [allTickers, setAllTickers] = useState<string[]>([
-    //@ts-ignore
-    ...new Set(data?.getAllStocks.stocks.map((stock) => stock.symbol)),
-  ]);
+  const [allTickers, setAllTickers] = useState<string[]>([]);
 
   const { data, error, loading } = useGetAllStocksQuery({
     variables: {
       from,
       to,
-      symbols: allTickers,
+      symbols: items,
     },
   });
 
@@ -35,24 +34,13 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
     loading: watchlistLoading,
   } = useGetWatchlistsQuery();
 
-  useEffect(() => {
-    if (watchlistData?.getWatchlists) {
-      setAllTickers(
-        watchlistData!.getWatchlists?.watchlists!.filter(
-          (watchlist) => watchlist.id.toString() === router.query.id
-        )[0].items
-      );
-    }
-  }, [watchlistData]);
-
-  const [saveStocks, { data: saveStockData, loading: saveStockLoading }] =
-    useSaveStocksMutation();
+  const [saveStocks, { loading: saveStockLoading }] = useSaveStocksMutation();
   const [reducedStockMap, setReducedStockMap] = useState<any[]>([]);
 
-  const saveIfDoesNotExist = async (item: string) => {
+  const saveIfDoesNotExist = async (diff: string) => {
     const savedStock = await saveStocks({
       variables: {
-        symbol: item,
+        symbol: diff,
         from,
         to,
       },
@@ -76,23 +64,25 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
     }
   };
 
-  const checkDiff = async (difference: string[]) => {
+  const checkDiff = (difference: string[]) => {
     for (const diff of difference) {
-      await saveIfDoesNotExist(diff);
-      router.reload();
+      saveIfDoesNotExist(diff);
     }
   };
 
   const checkAndSaveDiffs = () => {
     //@ts-ignore
-    let tickers: Stock[] = data!.getAllStocks!.stocks!.concat();
+    let tickers: Stock[] =
+      data?.getAllStocks?.stocks?.length! > 0
+        ? data?.getAllStocks?.stocks?.concat()
+        : [];
 
-    let fetchedTickers = [
-      //@ts-ignore
-      ...new Set(tickers.map((stock) => stock.symbol)),
-    ];
+    if (tickers) {
+      let fetchedTickers = [
+        //@ts-ignore
+        ...new Set(tickers.map((stock) => stock.symbol)),
+      ];
 
-    if (fetchedTickers!.length! > 0) {
       let diff = fetchedTickers!
         .filter((ticker) => !allTickers!.includes(ticker))
         .concat(
@@ -105,27 +95,18 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
   };
 
   useEffect(() => {
-    if (
-      !loading &&
-      !saveStockLoading &&
-      data?.getAllStocks! &&
-      data.getAllStocks.stocks &&
-      data!.getAllStocks!.stocks!.length! === 0
-    ) {
-      for (const ticker of allTickers!) {
-        saveIfDoesNotExist(ticker);
-      }
-    } else if (
-      !loading &&
-      !saveStockLoading &&
-      data?.getAllStocks! &&
-      data.getAllStocks.stocks &&
-      data?.getAllStocks.stocks?.length! > 0 &&
-      allTickers
-    ) {
-      checkAndSaveDiffs();
+    if (watchlistData?.getWatchlists) {
+      setAllTickers(
+        watchlistData!.getWatchlists?.watchlists!.filter(
+          (watchlist) => watchlist.id.toString() === router.query.id
+        )[0].items
+      );
     }
-  }, [data, allTickers, reducedStockMap]);
+  }, [watchlistData]);
+
+  useEffect(() => {
+    checkAndSaveDiffs();
+  }, []);
 
   if (loading || saveStockLoading || watchlistLoading) {
     let loadingSkeletons = [];
@@ -148,11 +129,7 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
     return <div>{error.message}</div>;
   }
 
-  if (
-    !loading &&
-    !saveStockLoading &&
-    data?.getAllStocks?.stocks?.length! > 0
-  ) {
+  if (data?.getAllStocks?.stocks?.length! > 0) {
     //@ts-ignore
     let result: Stock[] = data!.getAllStocks!.stocks!.concat();
 
@@ -162,21 +139,16 @@ const Stocks: React.FC<{}> = ({}): JSX.Element | null => {
       .map((stock) => <StockElement key={stock.id} inst={stock} />);
   }
 
-  if (
-    !loading &&
-    !saveStockLoading &&
-    reducedStockMap &&
-    reducedStockMap.length > 0
-  ) {
+  if (reducedStockMap.length > 0) {
     // @ts-ignore
     return reducedStockMap
       ?.flat()
       .sort((a, b) => {
         return moment(a.recordDate).diff(moment(b.recordDate));
       })
-      .map((stock) => (
+      .map((stock, index) => (
         <StockElement
-          key={stock.id}
+          key={index}
           inst={{
             symbol: stock.symbol,
             close: stock.close,

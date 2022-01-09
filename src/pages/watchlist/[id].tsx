@@ -101,10 +101,7 @@ const Watchlist = ({}) => {
               </Tr>
             </Thead>
             <Tbody>
-              {data?.getWatchlist!.watchlist!.items.map((watchlistItem) => {
-                return <Stocks key={watchlistItem} />;
-              })}
-              <Stocks />
+              <Stocks items={data.getWatchlist.watchlist?.items} />
             </Tbody>
           </Table>
         </Box>
