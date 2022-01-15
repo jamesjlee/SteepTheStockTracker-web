@@ -1,7 +1,7 @@
-import { Skeleton, Td, Tr } from '@chakra-ui/react';
+import { forwardRef, Skeleton, Td, Tr } from '@chakra-ui/react';
 import moment from 'moment';
 import { useRouter } from 'next/router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useState } from 'react';
 import {
   Stock,
   useGetAllStocksQuery,
@@ -10,9 +10,17 @@ import {
 } from '../generated/graphql';
 import StockElement from './Stock';
 
-const Stocks: React.FC<{ items: string[] | undefined }> = ({
-  items,
-}): JSX.Element | null => {
+const Stocks: React.FC<{
+  items: string[] | undefined;
+}> = forwardRef(({ items }, forwardedRef): JSX.Element | null => {
+  useImperativeHandle(forwardedRef, () => ({
+    reload: () => {
+      router.reload();
+    },
+  }));
+
+  const [different, setDifferent] = useState<boolean>(false);
+
   const from = localStorage.getItem('fromDate')
     ? localStorage.getItem('fromDate')
     : localStorage.setItem(
@@ -47,35 +55,46 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
   const [reducedStockMap, setReducedStockMap] = useState<any[]>([]);
 
   const saveIfDoesNotExist = async (diff: string) => {
-    const savedStock = await saveStocks({
-      variables: {
-        symbol: diff,
-        from,
-        to,
-      },
-      update: (cache) => {
-        cache.evict({ fieldName: 'stocks:{}' });
-      },
-    });
-
-    if (
-      savedStock &&
-      savedStock.data &&
-      savedStock.data.saveStocks &&
-      savedStock.data.saveStocks.stocks
-    ) {
-      for (const stockTicker of savedStock?.data?.saveStocks?.stocks!) {
-        if (!allTickers?.includes(stockTicker.symbol)) {
-          setReducedStockMap((prevStockMap) => [...prevStockMap, stockTicker]);
-          setAllTickers((prevTickers) => [...prevTickers!, stockTicker.symbol]);
-        }
-      }
+    try {
+      const savedStock = await saveStocks({
+        variables: {
+          symbol: diff,
+          from,
+          to,
+        },
+        update: (cache) => {
+          cache.evict({ fieldName: 'stocks:{}' });
+        },
+      });
+      return savedStock;
+    } catch (err) {
+      console.log(err);
     }
   };
 
-  const checkDiff = (difference: string[]) => {
+  const checkDiff = async (difference: string[]) => {
+    let allPromises = [];
     for (const diff of difference) {
-      saveIfDoesNotExist(diff);
+      allPromises.push(saveIfDoesNotExist(diff));
+    }
+
+    const awaitedPromises = await Promise.all(allPromises);
+    for (let i = 0; i < awaitedPromises.length; i++) {
+      if (awaitedPromises[i]?.data?.saveStocks.stocks?.length! > 0) {
+        for (const stockTicker of awaitedPromises[i]?.data?.saveStocks
+          ?.stocks!) {
+          if (!allTickers?.includes(stockTicker.symbol)) {
+            setReducedStockMap((prevStockMap) => [
+              ...prevStockMap,
+              stockTicker,
+            ]);
+            setAllTickers((prevTickers) => [
+              ...prevTickers,
+              stockTicker.symbol,
+            ]);
+          }
+        }
+      }
     }
   };
 
@@ -92,27 +111,26 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
         ...new Set(tickers.map((stock) => stock.symbol)),
       ];
 
-      let diff = fetchedTickers!
-        .filter((ticker) => !allTickers!.includes(ticker))
-        .concat(
-          ...allTickers!.filter((ticker) => !fetchedTickers!.includes(ticker))
-        );
+      let diff = allTickers.filter(
+        (ticker) =>
+          !fetchedTickers.some((fetchedTicker) => ticker === fetchedTicker)
+      );
 
       let dateIsDifferent = false;
       if (tickers.length > 0) {
-        dateIsDifferent =
-          moment(localStorage.getItem('fromDate')) <
-            moment(tickers[0]?.recordDate) ||
-          moment(localStorage.getItem('fromDate')) >
-            moment(tickers[0]?.recordDate) ||
-          moment(localStorage.getItem('toDate')) <
-            moment(tickers[tickers.length - 1]?.recordDate) ||
-          moment(localStorage.getItem('toDate')) <
-            moment(tickers[tickers.length - 1]?.recordDate);
+        dateIsDifferent = !moment(tickers[0]?.recordDate).isBetween(
+          moment(localStorage.getItem('fromDate')),
+          moment(localStorage.getItem('toDate')),
+          undefined,
+          '[]'
+        );
       }
+      console.log('diff', diff);
+      console.log('dateIsDiff', dateIsDifferent);
 
       if (diff.length > 0 || dateIsDifferent) {
         checkDiff(diff);
+        setDifferent(true);
       }
     }
   };
@@ -125,11 +143,15 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
         )[0].items
       );
     }
-  }, [watchlistData]);
+  }, [watchlistData?.getWatchlists.watchlists?.length, allTickers.length]);
 
   useEffect(() => {
     checkAndSaveDiffs();
-  }, [data]);
+  }, [
+    data?.getAllStocks.stocks?.length,
+    allTickers.length,
+    reducedStockMap.length,
+  ]);
 
   if (loading || saveStockLoading || watchlistLoading) {
     let loadingSkeletons = [];
@@ -148,8 +170,37 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
     return <>{loadingSkeleton}</>;
   }
 
-  if (error) {
-    return <div>{error.message}</div>;
+  if (error || watchlistError) {
+    let err = error || watchlistError;
+    return <div>{err?.message}</div>;
+  }
+
+  if (different) {
+    if (reducedStockMap.length > 0) {
+      // @ts-ignore
+      return reducedStockMap
+        ?.flat()
+        .sort((a, b) => {
+          return moment(a.recordDate).diff(moment(b.recordDate));
+        })
+        .map((stock, index) => (
+          <StockElement
+            key={stock.id}
+            inst={{
+              symbol: stock.symbol,
+              close: stock.close,
+              volume: stock.volume,
+              recordDate: stock.recordDate,
+            }}
+          />
+        ));
+    } else if (data?.getAllStocks.stocks?.length! > 0) {
+      //@ts-ignore
+      return data?.getAllStocks.stocks
+        ?.concat()
+        .sort((a, b) => moment(a.recordDate).diff(moment(b.recordDate)))
+        .map((stock, index) => <StockElement key={stock.id} inst={stock} />);
+    }
   }
 
   if (data?.getAllStocks?.stocks?.length! > 0) {
@@ -159,10 +210,10 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
     // @ts-ignore
     return result
       .sort((a, b) => moment(a.recordDate).diff(moment(b.recordDate)))
-      .map((stock) => <StockElement key={stock.id} inst={stock} />);
+      .map((stock, index) => <StockElement key={stock.id} inst={stock} />);
   }
 
-  if (reducedStockMap.length > 0) {
+  if (reducedStockMap && reducedStockMap.length > 0) {
     // @ts-ignore
     return reducedStockMap
       ?.flat()
@@ -171,7 +222,7 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
       })
       .map((stock, index) => (
         <StockElement
-          key={index}
+          key={stock.id}
           inst={{
             symbol: stock.symbol,
             close: stock.close,
@@ -182,7 +233,7 @@ const Stocks: React.FC<{ items: string[] | undefined }> = ({
       ));
   }
 
-  return <div>could not render stock</div>;
-};
+  return <Tr>could not render stock</Tr>;
+});
 
 export default Stocks;

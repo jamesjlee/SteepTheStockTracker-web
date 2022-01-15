@@ -13,7 +13,7 @@ import {
 } from '@chakra-ui/react';
 import moment from 'moment';
 import { useRouter } from 'next/router';
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import Layout from '../../components/Layout';
 import Stocks from '../../components/Stocks';
 import { useAddToWatchlistMutation } from '../../generated/graphql';
@@ -25,6 +25,7 @@ const Watchlist = ({}) => {
   const [addToWatchlist] = useAddToWatchlistMutation();
   const tickerRef = useRef<any>();
   const router = useRouter();
+  const stocksRef = useRef<any>();
 
   const backDate = () => {
     if (localStorage.getItem('fromDate') && localStorage.getItem('toDate')) {
@@ -40,7 +41,7 @@ const Watchlist = ({}) => {
           .subtract(5, 'days')
           .format('YYYY-MM-DD')
       );
-      router.reload();
+      stocksRef?.current?.reload();
     }
   };
   const forwardDate = () => {
@@ -57,14 +58,14 @@ const Watchlist = ({}) => {
           .add(5, 'days')
           .format('YYYY-MM-DD')
       );
-      router.reload();
+      stocksRef?.current?.reload();
     }
   };
 
   if (loading) {
     return (
       <Layout>
-        <div>loading...</div>
+        <div>loading table...</div>
       </Layout>
     );
   }
@@ -148,7 +149,11 @@ const Watchlist = ({}) => {
               </Tr>
             </Thead>
             <Tbody>
-              <Stocks items={data.getWatchlist.watchlist?.items} />
+              <Stocks
+                items={data.getWatchlist.watchlist?.items}
+                //@ts-ignore
+                ref={stocksRef}
+              />
             </Tbody>
           </Table>
         </Box>
